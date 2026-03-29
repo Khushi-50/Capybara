@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import '../ui/appcolors.dart';
 import 'home.dart'; // Your Zig-Zag Map
-import 'rank.dart';
+import 'rank-2.dart';
 import 'profile.dart';
 import 'today.dart';
 

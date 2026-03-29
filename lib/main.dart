@@ -1,6 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:hackmol7/screens/splash.dart';
+import 'package:hackmol7/services/notification_service.dart';
+import 'package:hackmol7/ui/apptheme.dart';
 import 'package:provider/provider.dart';
+import 'package:timezone/data/latest_10y.dart' as tz;
 import 'providers/quest_provider.dart';
 //import 'screens/main_navigation_screen.dart'; // Your Bottom Nav wrapper
 
@@ -9,7 +12,11 @@ void main() async {
   WidgetsFlutterBinding.ensureInitialized();
 
   final questProvider = QuestProvider();
+  tz.initializeTimeZones();
 
+  // 3. Initialize your Notification Service
+  final notificationService = NotificationService();
+  await notificationService.init();
   // 2. IMPORTANT: Load user data and the Map API before the app starts
   // This ensures provider.currentChapter is NOT null when HomeScreen builds
   try {
@@ -34,10 +41,7 @@ class MyApp extends StatelessWidget {
     return MaterialApp(
       debugShowCheckedModeBanner: false,
       title: 'CodeQuest',
-      theme: ThemeData(
-        brightness: Brightness.dark,
-        scaffoldBackgroundColor: const Color(0xFF0A0E21), // Matching your UI
-      ),
+      theme: AppTheme.darkTheme,
       // 3. Using a Consumer ensures that if data loads late, the UI updates
       home: Consumer<QuestProvider>(
         builder: (context, provider, _) {

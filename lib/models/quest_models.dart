@@ -1,4 +1,6 @@
-// 1. Individual Question Level
+// quest_models.dart
+// All IDs are Strings because MongoDB ObjectIds come back as strings from the API.
+
 class QuizQuestion {
   final int id;
   final String question;
@@ -16,18 +18,19 @@ class QuizQuestion {
 
   factory QuizQuestion.fromJson(Map<String, dynamic> json) {
     return QuizQuestion(
-      id: json['id'] ?? 0,
-      question: json['question'] ?? '',
+      id: json['question_number'] ?? json['id'] ?? 0,
+      // Backend uses 'question_text', JSON files use 'question'
+      question: json['question_text'] ?? json['question'] ?? '',
       options: List<String>.from(json['options'] ?? []),
-      answer: json['answer'] ?? '',
-      xp: json['xp'] ?? 0,
+      // Backend uses 'correct_answer', JSON files use 'answer'
+      answer: json['correct_answer'] ?? json['answer'] ?? '',
+      xp: json['xp_value'] ?? json['xp'] ?? 0,
     );
   }
 }
 
-// 2. The Quiz Level (A subtopic has multiple of these)
 class QuizSubtopic {
-  final int quizId;
+  final String quizId;
   final String quizTitle;
   final List<QuizQuestion> questions;
 
@@ -38,24 +41,23 @@ class QuizSubtopic {
   });
 
   factory QuizSubtopic.fromJson(Map<String, dynamic> json) {
+    // Backend sends 'id' (ObjectId), local JSON sends 'quiz_id'
+    final rawQuestions =
+        (json['questions'] ?? json['quizzes'] ?? []) as List;
+
     return QuizSubtopic(
-      quizId: json['quiz_id'] ?? 0,
+      quizId: json['id']?.toString() ?? json['quiz_id']?.toString() ?? '0',
       quizTitle: json['quiz_title'] ?? '',
-      questions:
-          (json['quizzes'] != null) // Handles the nested quizzes key
-          ? (json['quizzes'] as List)
-                .map((q) => QuizQuestion.fromJson(q))
-                .toList()
-          : (json['questions'] as List? ?? [])
-                .map((q) => QuizQuestion.fromJson(q))
-                .toList(),
+      questions: rawQuestions
+          .map((q) => QuizQuestion.fromJson(q as Map<String, dynamic>))
+          .toList(),
     );
   }
 }
 
-// 3. The Subtopic Level (The Circles/Nodes on your map)
 class SubtopicFolder {
-  final int subtopicId;
+  // String ID so it works with MongoDB ObjectId strings from the API
+  final String subtopicId;
   final String subtopicName;
   final List<QuizSubtopic> quizzes;
 
@@ -67,16 +69,22 @@ class SubtopicFolder {
 
   factory SubtopicFolder.fromJson(Map<String, dynamic> json) {
     return SubtopicFolder(
-      subtopicId: json['subtopic_id'] ?? 0,
+      // Backend map sends 'id', local JSON sends 'subtopic_id'
+      subtopicId:
+          json['id']?.toString() ?? json['subtopic_id']?.toString() ?? '0',
       subtopicName: json['subtopic_name'] ?? '',
       quizzes: (json['quizzes'] as List? ?? [])
-          .map((z) => QuizSubtopic.fromJson(z))
+          .map((z) => QuizSubtopic.fromJson(z as Map<String, dynamic>))
           .toList(),
     );
   }
+
+  // Convenience: all questions across every quiz in this subtopic node,
+  // used as the offline fallback when API is unreachable
+  List<QuizQuestion> get allQuestions =>
+      quizzes.expand((q) => q.questions).toList();
 }
 
-// 4. The Root Level (The entire Chapter)
 class FullChapterModel {
   final String course;
   final int chapter;
@@ -96,7 +104,7 @@ class FullChapterModel {
       chapter: json['chapter'] ?? 0,
       chapterName: json['chapter_name'] ?? '',
       subtopics: (json['subtopics'] as List? ?? [])
-          .map((s) => SubtopicFolder.fromJson(s))
+          .map((s) => SubtopicFolder.fromJson(s as Map<String, dynamic>))
           .toList(),
     );
   }
